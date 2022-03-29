@@ -33,4 +33,3 @@ class AppDatabase extends _$AppDatabase {
   Future saveWordPair(WordPair wordPair) => into(savedWordPairs).insert(SavedWordPair(first: wordPair.first, second: wordPair.second));
   Future unsaveWordPair(WordPair wordPair) => delete(savedWordPairs).delete(SavedWordPair(first: wordPair.first, second: wordPair.second));
 }
-
