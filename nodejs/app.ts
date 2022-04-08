@@ -7,12 +7,12 @@ import jwt from 'jsonwebtoken';
 import bodyParser from 'body-parser';
 
 
-let secretKey = 'cool_random_words';
-let app = express();
+const secretKey = 'cool_random_words';
+const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post('/login', (request, response) => {
-    let { username, password } = request.body;
+    const { username, password } = request.body;
     if (!username || username.length < 3 || !password || password.length < 3) {
         response.status(400).send({ error: 'Invalid username or password' });
         return;
@@ -45,7 +45,7 @@ app.post('/login', (request, response) => {
 });
 
 app.post('/register', (request, response) => {
-    let { username, password } = request.body;
+    const { username, password } = request.body;
     if (!username || username.length < 3) {
         response.status(400).json('Username needs to be 3 or more characters');
         return;
@@ -70,8 +70,6 @@ app.post('/register', (request, response) => {
     });
 });
 
-
-
 app.use((request, response, next) => {
     let token = request.headers['x-access-token'] || request.body?.token;
 
@@ -94,11 +92,9 @@ app.use((request, response, next) => {
     });
 });
 
-
-
 app.get('/words', function (request, response) {
-    let amount = Number(request.query.amount) || 10;
-    let words = [];
+    const amount = Number(request.query.amount) || 10;
+    const words = [];
     for (let i = 0; i < amount; i++) {
         words.push(Words.getRandomWordPair());
     }
@@ -173,8 +169,8 @@ app.delete('/users/:id/favorites/:word', function (request, response) {
 
 
 
-let server = app.listen(process.env.PORT || 3000, () => {
-    let info = server.address();
+const server = app.listen(process.env.PORT || 3000, () => {
+    const info = server.address();
     if (info instanceof Object) console.log(`Running server on ${info.address == '::' ? 'localhost' : info.address}:${info.port}`);
     else console.log(`Running server...`);
 });

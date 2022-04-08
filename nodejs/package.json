@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.ts",
   "scripts": {
-    "run": "node app.ts",
+    "start": "node out/app.js",
+    "build": "tsc --build",
     "dev": "npx nodemon app.ts"
   },
   "author": "",
