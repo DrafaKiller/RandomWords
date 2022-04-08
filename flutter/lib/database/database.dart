@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:english_words/english_words.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
@@ -9,9 +8,9 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [SavedWordPairs])
-class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openDatabase());
+@DriftDatabase(tables: [SavedWords])
+class Database extends _$Database {
+  Database() : super(_openDatabase());
 
   @override
   int get schemaVersion => 1;
@@ -23,13 +22,11 @@ class AppDatabase extends _$AppDatabase {
       return NativeDatabase(file);
     });
   }
-  
-  // Future<List<WordPair>> getSavedWordPairs() => select(savedWordPairs).map((savedWord) => WordPair(savedWord.first, savedWord.second)).get();
-  // Future saveWordPair(SavedWordPair savedWordPair) => into(savedWordPairs).insert(savedWordPair);
-  // Future unsaveWordPair(SavedWordPair savedWordPair) => delete(savedWordPairs).delete(savedWordPair);
-  
-  Future<List<WordPair>> getSavedWordPairs() => select(savedWordPairs).map((savedWord) => WordPair(savedWord.first, savedWord.second)).get();
-  Stream<List<WordPair>> watchSavedWordPairs() => select(savedWordPairs).map((savedWord) => WordPair(savedWord.first, savedWord.second)).watch();
-  Future saveWordPair(WordPair wordPair) => into(savedWordPairs).insert(SavedWordPair(first: wordPair.first, second: wordPair.second));
-  Future unsaveWordPair(WordPair wordPair) => delete(savedWordPairs).delete(SavedWordPair(first: wordPair.first, second: wordPair.second));
+
+  Future<List<SavedWord>> getSavedWordPairs() => select(savedWords).get();
+  Stream<List<SavedWord>> watchSavedWords() => select(savedWords).watch();
+  Future<int> saveWord(SavedWordsCompanion savedWord) => into(savedWords).insert(savedWord);
+  Future<int> saveWordByName(String word) => saveWord(SavedWordsCompanion(word: Value(word)));
+  Future unsaveWord(SavedWord savedWord) => delete(savedWords).delete(savedWord);
+  Future unsaveWordByName(String word) => (delete(savedWords)..where((savedWord) => savedWord.word.equals(word))).go();
 }

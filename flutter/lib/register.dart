@@ -1,15 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'main.dart';
-import 'random_words.dart';
-
-import 'package:http/http.dart' as http;
-
-
+import 'package:random_words/api.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({ Key? key }) : super(key: key);
+  final void Function(String username, String password)? onRegister;
+  final void Function()? onCancel;
+
+  const RegisterPage({
+    Key? key,
+    this.onRegister,
+    this.onCancel,
+  }) : super(key: key);
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -42,6 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
             children: [
               const Text(
                 'New Account',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
@@ -84,13 +85,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: Text('Register', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
                 ),
               ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                    child: Text('Cancel')
-                  ),
+              TextButton(
+                onPressed: () => _cancel(),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                  child: Text('Cancel')
                 ),
+              ),
             ],
           ),
         ),
@@ -98,45 +99,24 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  void _register(BuildContext context) {
+  void _register(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
-      http.post(MyApp.urlREST.resolve('register'), body: {
-        'username': _usernameController.text,
-        'password': _passwordController.text,
-      }).then((http.Response response) {
-        if (response.statusCode == 200) {
-          _login(context);
-        } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Username already registered'),
-              ),
-            );
-        }
-      });
-    }
-  }
-
-  void _login(BuildContext context) {
-    http.post(MyApp.urlREST.resolve('login'), body: {
-      'username': _usernameController.text,
-      'password': _passwordController.text,
-    }).then((http.Response response) {
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        MyApp.token = responseData['token'];
-        MyApp.userId = responseData['user']['id'];
-        
-        _usernameController.clear();
-        _passwordController.clear();
-
-        Navigator.of(context).pop();
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (BuildContext context) => const RandomWords(),
+      bool registered = await API.register(_usernameController.text, _passwordController.text);
+      if (registered) {
+        widget.onRegister?.call(_usernameController.text, _passwordController.text);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Username already registered'),
           ),
         );
       }
-    });
+    }
+  }
+
+  void _cancel() {
+    _usernameController.clear();
+    _passwordController.clear();
+    widget.onCancel?.call();
   }
 }

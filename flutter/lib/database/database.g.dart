@@ -7,187 +7,182 @@ part of 'database.dart';
 // **************************************************************************
 
 // ignore_for_file: unnecessary_brace_in_string_interps, unnecessary_this
-class SavedWordPair extends DataClass implements Insertable<SavedWordPair> {
-  final String first;
-  final String second;
-  SavedWordPair({required this.first, required this.second});
-  factory SavedWordPair.fromData(Map<String, dynamic> data, {String? prefix}) {
+class SavedWord extends DataClass implements Insertable<SavedWord> {
+  final int id;
+  final String word;
+  SavedWord({required this.id, required this.word});
+  factory SavedWord.fromData(Map<String, dynamic> data, {String? prefix}) {
     final effectivePrefix = prefix ?? '';
-    return SavedWordPair(
-      first: const StringType()
-          .mapFromDatabaseResponse(data['${effectivePrefix}first'])!,
-      second: const StringType()
-          .mapFromDatabaseResponse(data['${effectivePrefix}second'])!,
+    return SavedWord(
+      id: const IntType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}id'])!,
+      word: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}word'])!,
     );
   }
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['first'] = Variable<String>(first);
-    map['second'] = Variable<String>(second);
+    map['id'] = Variable<int>(id);
+    map['word'] = Variable<String>(word);
     return map;
   }
 
-  SavedWordPairsCompanion toCompanion(bool nullToAbsent) {
-    return SavedWordPairsCompanion(
-      first: Value(first),
-      second: Value(second),
+  SavedWordsCompanion toCompanion(bool nullToAbsent) {
+    return SavedWordsCompanion(
+      id: Value(id),
+      word: Value(word),
     );
   }
 
-  factory SavedWordPair.fromJson(Map<String, dynamic> json,
+  factory SavedWord.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SavedWordPair(
-      first: serializer.fromJson<String>(json['first']),
-      second: serializer.fromJson<String>(json['second']),
+    return SavedWord(
+      id: serializer.fromJson<int>(json['id']),
+      word: serializer.fromJson<String>(json['word']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'first': serializer.toJson<String>(first),
-      'second': serializer.toJson<String>(second),
+      'id': serializer.toJson<int>(id),
+      'word': serializer.toJson<String>(word),
     };
   }
 
-  SavedWordPair copyWith({String? first, String? second}) => SavedWordPair(
-        first: first ?? this.first,
-        second: second ?? this.second,
+  SavedWord copyWith({int? id, String? word}) => SavedWord(
+        id: id ?? this.id,
+        word: word ?? this.word,
       );
   @override
   String toString() {
-    return (StringBuffer('SavedWordPair(')
-          ..write('first: $first, ')
-          ..write('second: $second')
+    return (StringBuffer('SavedWord(')
+          ..write('id: $id, ')
+          ..write('word: $word')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(first, second);
+  int get hashCode => Object.hash(id, word);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SavedWordPair &&
-          other.first == this.first &&
-          other.second == this.second);
+      (other is SavedWord && other.id == this.id && other.word == this.word);
 }
 
-class SavedWordPairsCompanion extends UpdateCompanion<SavedWordPair> {
-  final Value<String> first;
-  final Value<String> second;
-  const SavedWordPairsCompanion({
-    this.first = const Value.absent(),
-    this.second = const Value.absent(),
+class SavedWordsCompanion extends UpdateCompanion<SavedWord> {
+  final Value<int> id;
+  final Value<String> word;
+  const SavedWordsCompanion({
+    this.id = const Value.absent(),
+    this.word = const Value.absent(),
   });
-  SavedWordPairsCompanion.insert({
-    required String first,
-    required String second,
-  })  : first = Value(first),
-        second = Value(second);
-  static Insertable<SavedWordPair> custom({
-    Expression<String>? first,
-    Expression<String>? second,
+  SavedWordsCompanion.insert({
+    this.id = const Value.absent(),
+    required String word,
+  }) : word = Value(word);
+  static Insertable<SavedWord> custom({
+    Expression<int>? id,
+    Expression<String>? word,
   }) {
     return RawValuesInsertable({
-      if (first != null) 'first': first,
-      if (second != null) 'second': second,
+      if (id != null) 'id': id,
+      if (word != null) 'word': word,
     });
   }
 
-  SavedWordPairsCompanion copyWith(
-      {Value<String>? first, Value<String>? second}) {
-    return SavedWordPairsCompanion(
-      first: first ?? this.first,
-      second: second ?? this.second,
+  SavedWordsCompanion copyWith({Value<int>? id, Value<String>? word}) {
+    return SavedWordsCompanion(
+      id: id ?? this.id,
+      word: word ?? this.word,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (first.present) {
-      map['first'] = Variable<String>(first.value);
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
     }
-    if (second.present) {
-      map['second'] = Variable<String>(second.value);
+    if (word.present) {
+      map['word'] = Variable<String>(word.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('SavedWordPairsCompanion(')
-          ..write('first: $first, ')
-          ..write('second: $second')
+    return (StringBuffer('SavedWordsCompanion(')
+          ..write('id: $id, ')
+          ..write('word: $word')
           ..write(')'))
         .toString();
   }
 }
 
-class $SavedWordPairsTable extends SavedWordPairs
-    with TableInfo<$SavedWordPairsTable, SavedWordPair> {
+class $SavedWordsTable extends SavedWords
+    with TableInfo<$SavedWordsTable, SavedWord> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SavedWordPairsTable(this.attachedDatabase, [this._alias]);
-  final VerificationMeta _firstMeta = const VerificationMeta('first');
+  $SavedWordsTable(this.attachedDatabase, [this._alias]);
+  final VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String?> first = GeneratedColumn<String?>(
-      'first', aliasedName, false,
+  late final GeneratedColumn<int?> id = GeneratedColumn<int?>(
+      'id', aliasedName, false,
+      type: const IntType(),
+      requiredDuringInsert: false,
+      defaultConstraints: 'PRIMARY KEY AUTOINCREMENT');
+  final VerificationMeta _wordMeta = const VerificationMeta('word');
+  @override
+  late final GeneratedColumn<String?> word = GeneratedColumn<String?>(
+      'word', aliasedName, false,
       type: const StringType(), requiredDuringInsert: true);
-  final VerificationMeta _secondMeta = const VerificationMeta('second');
   @override
-  late final GeneratedColumn<String?> second = GeneratedColumn<String?>(
-      'second', aliasedName, false,
-      type: const StringType(), requiredDuringInsert: true);
+  List<GeneratedColumn> get $columns => [id, word];
   @override
-  List<GeneratedColumn> get $columns => [first, second];
+  String get aliasedName => _alias ?? 'saved_words';
   @override
-  String get aliasedName => _alias ?? 'saved_word_pairs';
+  String get actualTableName => 'saved_words';
   @override
-  String get actualTableName => 'saved_word_pairs';
-  @override
-  VerificationContext validateIntegrity(Insertable<SavedWordPair> instance,
+  VerificationContext validateIntegrity(Insertable<SavedWord> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('first')) {
-      context.handle(
-          _firstMeta, first.isAcceptableOrUnknown(data['first']!, _firstMeta));
-    } else if (isInserting) {
-      context.missing(_firstMeta);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('second')) {
-      context.handle(_secondMeta,
-          second.isAcceptableOrUnknown(data['second']!, _secondMeta));
+    if (data.containsKey('word')) {
+      context.handle(
+          _wordMeta, word.isAcceptableOrUnknown(data['word']!, _wordMeta));
     } else if (isInserting) {
-      context.missing(_secondMeta);
+      context.missing(_wordMeta);
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {first, second};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SavedWordPair map(Map<String, dynamic> data, {String? tablePrefix}) {
-    return SavedWordPair.fromData(data,
+  SavedWord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    return SavedWord.fromData(data,
         prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
-  $SavedWordPairsTable createAlias(String alias) {
-    return $SavedWordPairsTable(attachedDatabase, alias);
+  $SavedWordsTable createAlias(String alias) {
+    return $SavedWordsTable(attachedDatabase, alias);
   }
 }
 
-abstract class _$AppDatabase extends GeneratedDatabase {
-  _$AppDatabase(QueryExecutor e) : super(SqlTypeSystem.defaultInstance, e);
-  late final $SavedWordPairsTable savedWordPairs = $SavedWordPairsTable(this);
+abstract class _$Database extends GeneratedDatabase {
+  _$Database(QueryExecutor e) : super(SqlTypeSystem.defaultInstance, e);
+  late final $SavedWordsTable savedWords = $SavedWordsTable(this);
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [savedWordPairs];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [savedWords];
 }

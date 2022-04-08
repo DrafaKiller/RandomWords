@@ -1,14 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:random_words/api.dart';
 
-import 'main.dart';
-import 'random_words.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({ Key? key }) : super(key: key);
+  final void Function(API api)? onLogin;
+  
+  const LoginPage({
+    Key? key,
+    this.onLogin,
+  }) : super(key: key);
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -25,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
     _usernameController.dispose();
     _passwordController.dispose();
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,6 +39,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               const Text(
                 'Random Words',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
@@ -71,14 +73,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 40),
                     ElevatedButton(
-                      onPressed: () => _login(context),
+                      onPressed: () => _login(),
                       child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                         child: Text('Login', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
                       ),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterPage())),
+                      onPressed: () => _showRegister(),
                       child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                         child: Text('Register')
@@ -94,33 +96,35 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _login(BuildContext context) {
+  void _showRegister() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (context) => RegisterPage(
+        onRegister: (username, password) {
+          _usernameController.text = username;
+          _passwordController.text = password;
+          _login();
+        },
+        onCancel: () => Navigator.of(context).pop())
+      )
+    );
+  }
+
+  void _login() async {
     if (_formKey.currentState!.validate()) {
-      http.post(MyApp.urlREST.resolve('login'), body: {
-        'username': _usernameController.text,
-        'password': _passwordController.text,
-      }).then((http.Response response) {
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> responseData = json.decode(response.body);
-          MyApp.token = responseData['token'];
-          MyApp.userId = responseData['user']['id'];
+      API? api = await API.login(_usernameController.text, _passwordController.text);
+      if (api != null) {
+        widget.onLogin?.call(api);
 
-          _usernameController.clear();
-          _passwordController.clear();
-
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (BuildContext context) => const RandomWords(),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Username or password is incorrect'),
-            ),
-          );
-        }
-      });
+        _usernameController.clear();
+        _passwordController.clear();
+      } else {
+        _passwordController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Username or password is incorrect', textAlign: TextAlign.center),
+          ),
+        );
+      }
     }
   }
 }

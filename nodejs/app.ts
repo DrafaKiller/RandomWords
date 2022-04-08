@@ -73,7 +73,12 @@ app.post('/register', (request, response) => {
 
 
 app.use((request, response, next) => {
-    let token = request.headers['x-access-token'] || request.headers['authorization'] || request.body?.token;
+    let token = request.headers['x-access-token'] || request.body?.token;
+
+    if (!token) {
+        token = request.headers.authorization?.match(/Bearer (.+)/)?.[1];
+    }
+
     if (!token) {
         response.status(401).json('Unauthorized');
         return;

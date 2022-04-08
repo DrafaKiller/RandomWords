@@ -1,36 +1,40 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:random_words/api.dart';
 
-import 'main.dart';
+import 'database/database.dart';
 
+final databaseProvider = Provider<Database>((reference) {
+  final Database database = Database();
+  reference.onDispose(() => database.close());
+  return database;
+});
 
+class RandomWords extends ConsumerStatefulWidget {
+  final API api;
+  final int wordsUpdateThreshold = 20;
+  final int wordsUpdateAmount = 20;
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({ Key? key }) : super(key: key);
+  const RandomWords({
+    Key? key,
+    required this.api,
+  }) : super(key: key);
 
   @override
-  State<RandomWords> createState() => _RandomWordsState();
+  RandomWordsState createState() => RandomWordsState();
 }
 
-class _RandomWordsState extends State<RandomWords> {
+class RandomWordsState extends ConsumerState<RandomWords> {
   final _suggestions = <String>[];
-  var _saved = <String>[];
-  late Future<List<String>> _futureSaved;
-  Future<List<String>>? _futureWords;
-  final int _wordsUpdateThreshold = 20;
-  final int _wordsUpdateAmount = 20;
-  bool _initialized = false;
-
-  // ver: lib rxdart
+  bool _waitingForWords = false;
 
   final _biggerFont = const TextStyle(fontSize: 18);
+
+  late final Database database = Database();
 
   @override
   void initState() {
     super.initState();
-    _futureSaved = _getSavedWords();
   }
   
   @override
@@ -46,34 +50,21 @@ class _RandomWordsState extends State<RandomWords> {
           ),
         ]
       ),
-      body: FutureBuilder<List<String>>(
-        future: _futureSaved,
-        builder: (context, savedWords) {
-          if (savedWords.hasData && !_initialized) {
-            _saved = savedWords.data!;
-            for (int index = 0; index < _saved.length; index++) {
-              _suggestions[index] = _saved[index];
-            }
-            _initialized = true;
-          }
-
+      body: StreamBuilder<List<SavedWord>>(
+        stream: database.watchSavedWords(),
+        builder: (context, snapshot) {
+          List<SavedWord> savedWords = snapshot.data ?? [];
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: _suggestions.length + 1,
             itemBuilder: (context, index) {
-              if (index > _suggestions.length - _wordsUpdateThreshold && _futureWords == null) {
-                _futureWords = _getWords(amount: _wordsUpdateAmount);
-                _futureWords!.then((value) {
-                  setState(() {
-                    _suggestions.addAll(value);
-                    _futureWords = null;
-                  });
-                });
+              if (index > _suggestions.length - widget.wordsUpdateThreshold) {
+                _requestWords();
               }
               if (index >= _suggestions.length) {
                 return const ListTile(title: Center(child: CircularProgressIndicator()));
               }
-              return _buildRow(_suggestions[index]);
+              return _buildRow(_suggestions[index], savedWords.any((savedWord) => savedWord.word == _suggestions[index]));
             },
             separatorBuilder: (context, index) => const Divider(),
           );
@@ -82,25 +73,37 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 
-  Widget _buildRow(String word) {
+  void _requestWords() async {
+    if (!_waitingForWords) {
+      _waitingForWords = true;
+      List<String>? words = await widget.api.getWords(amount: widget.wordsUpdateAmount);
+      if (words != null) {
+        setState(() {
+          _suggestions.addAll(words);
+        });
+      }
+      _waitingForWords = false;
+    }
+  }
+
+  Widget _buildRow(String word, bool isSaved) {
     return StatefulBuilder(
       builder: (context, setState) {
-        final alreadySaved = _saved.contains(word);
         return ListTile(
           title: Text(word, style: _biggerFont),
           trailing: Icon(
-            alreadySaved ? Icons.favorite : Icons.favorite_border,
-            color: alreadySaved ? Colors.red : null,
-            semanticLabel: alreadySaved ? 'Remove from saved' : 'Save'
+            isSaved ? Icons.favorite : Icons.favorite_border,
+            color: isSaved ? Colors.red : null,
+            semanticLabel: isSaved ? 'Remove from saved' : 'Save'
           ),
           onTap: () async {
-            if (alreadySaved) {
-              if (await _unsaveWord(word)) {
-                setState(() => _saved.remove(word));
+            if (isSaved) {
+              if (await widget.api.removeSavedWord(word)) {
+                database.unsaveWordByName(word);
               }
             } else {
-              if (await _saveWord(word)) {
-                setState(() => _saved.add(word));
+              if (await widget.api.addSavedWord(word)) {
+                database.saveWordByName(word);
               }
             }
           },
@@ -109,62 +112,26 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 
-  Future<List<String>> _getWords({int amount = 10}) async {
-    var words = <String>[];
-
-    var response = await http.get(MyApp.urlREST.resolve('/words?amount=$amount'), headers: { 'Authorization': MyApp.token! });
-    if (response.statusCode == 200) {
-        List<String> json = List.from(jsonDecode(response.body));
-      words.addAll(json);
-    }
-
-    return words;
-  }
-
-  Future<List<String>> _getSavedWords() async {
-    var words = <String>[];
-    var response = await http.get(MyApp.urlREST.resolve('/users/${MyApp.userId}/favorites'), headers: { 'Authorization': MyApp.token! });
-
-    if (response.statusCode == 200) {
-      List<String> json = List.from(jsonDecode(response.body));
-      words.addAll(json);
-    }
-    
-    return words;
-  }
-
-  Future<bool> _saveWord(String word) async {
-    var response = await http.post(MyApp.urlREST.resolve('/users/${MyApp.userId}/favorites/$word'), headers: { 'Authorization': MyApp.token! });
-    return response.statusCode == 200;
-  }
-
-  Future<bool> _unsaveWord(String word) async {
-    var response = await http.delete(MyApp.urlREST.resolve('/users/${MyApp.userId}/favorites/$word'), headers: { 'Authorization': MyApp.token! });
-    return response.statusCode == 200;
-  }
-
   void _openSaved() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              final tiles = _saved.map((word) {
-                return ListTile(
-                  key: ValueKey(word),
-                  title: Text(word, style: _biggerFont),
-                  trailing: const Icon(Icons.delete, semanticLabel: 'Remove from saved'),
-                  onTap: () async {
-                    if (await _unsaveWord(word)) {
-                      this.setState(() {
-                        setState(() => _saved.remove(word));
-                      });
-                    }
+          return StreamBuilder<List<SavedWord>>(
+            stream: database.watchSavedWords(),
+            builder: (context, snapshot) {
+              List<SavedWord> savedWords = snapshot.data ?? [];
+              final tiles = savedWords.map((word) => ListTile(
+                key: ValueKey(word),
+                title: Text(word.word, style: _biggerFont),
+                trailing: const Icon(Icons.delete, semanticLabel: 'Remove from saved'),
+                onTap: () async {
+                  if (await widget.api.removeSavedWord(word.word)) {
+                    database.unsaveWord(word);
                   }
-                );
-              }).toList();
+                }
+              )).toList();
 
-              if (_saved.isEmpty) {
+              if (savedWords.isEmpty) {
                 tiles.add(const ListTile(
                   title: Center(child: Text("No suggestions saved"))
                 ));
