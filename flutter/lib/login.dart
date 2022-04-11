@@ -100,6 +100,7 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.push(context, MaterialPageRoute(
       builder: (context) => RegisterPage(
         onRegister: (username, password) {
+          Navigator.pop(context);
           _usernameController.text = username;
           _passwordController.text = password;
           _login();

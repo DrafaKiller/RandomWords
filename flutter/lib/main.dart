@@ -6,7 +6,6 @@ import 'login.dart';
 
 import 'dart:ffi';
 import 'dart:io';
-import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3/open.dart';
 
 void main() {
@@ -19,7 +18,7 @@ void main() {
 
 DynamicLibrary _openOnWindows() {
   final script = File(Platform.script.toFilePath());
-  final libraryNextToScript = File('${script.path}/sqlite3.dll');
+  final libraryNextToScript = File('${script.parent.path}/sqlite3.dll');
   return DynamicLibrary.open(libraryNextToScript.path);
 }
 

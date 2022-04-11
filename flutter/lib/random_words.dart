@@ -28,15 +28,15 @@ class RandomWordsState extends ConsumerState<RandomWords> {
   final _suggestions = <String>[];
   bool _waitingForWords = false;
 
-  late final Database database = Database();
-
   @override
   void initState() {
     super.initState();
+    fetchSavedWords();
   }
   
   @override
   Widget build(BuildContext context) {
+    Database database = ref.watch(databaseProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Random Words'),
@@ -62,7 +62,22 @@ class RandomWordsState extends ConsumerState<RandomWords> {
               if (index >= _suggestions.length) {
                 return const ListTile(title: Center(child: CircularProgressIndicator()));
               }
-              return RandomWordRow(word: _suggestions[index], saved: savedWords.any((savedWord) => savedWord.word == _suggestions[index]));
+              String word = _suggestions[index];
+              final isSaved = savedWords.any((savedWord) => savedWord.word == word);
+              return RandomWordRow(
+                word: word,
+                saved: isSaved,
+                onSave: () async {
+                  if (await widget.api.addSavedWord(word)) {
+                    database.addSaveWordByName(word);
+                  }
+                },
+                onUnsave: () async {
+                  if (await widget.api.removeSavedWord(word)) {
+                    database.removeSavedWordByName(word);
+                  }
+                }
+              );
             },
             separatorBuilder: (context, index) => const Divider(),
           );
@@ -85,6 +100,7 @@ class RandomWordsState extends ConsumerState<RandomWords> {
   }
 
   void _openSaved() {
+    Database database = ref.watch(databaseProvider);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) {
@@ -98,7 +114,7 @@ class RandomWordsState extends ConsumerState<RandomWords> {
                 trailing: const Icon(Icons.delete, semanticLabel: 'Remove from saved'),
                 onTap: () async {
                   if (await widget.api.removeSavedWord(word.word)) {
-                    database.unsaveWord(word);
+                    database.removeSavedWord(word);
                   }
                 }
               )).toList();
@@ -109,11 +125,51 @@ class RandomWordsState extends ConsumerState<RandomWords> {
                 ));
               }
 
-              final divided = tiles.isNotEmpty ? ListTile.divideTiles(context: context, tiles: tiles).toList() : <Widget>[];
-
               return Scaffold(
                 appBar: AppBar(title: const Text('Saved Suggestions')),
-                body: ListView(children: divided)
+                body: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: tiles.length,
+                  itemBuilder: (context, index) => tiles[index],
+                  separatorBuilder: (context, index) => const Divider(),
+                ),
+                floatingActionButton: FloatingActionButton(
+                  child: const Icon(Icons.add),
+                  onPressed: () async {
+                    String? currentWord;
+                    final word = await showDialog<String>(
+                      context: context,
+                      builder: (context) {
+                        return ProviderScope(
+                          child: AlertDialog(
+                            title: const Text('Add a word'),
+                            content: TextField(
+                              autofocus: true,
+                              decoration: const InputDecoration(labelText: 'Word'),
+                              onChanged: (value) => currentWord = value
+                            ),
+                            actions: [
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop()
+                              ),
+                              TextButton(
+                                child: const Text('Add'),
+                                onPressed: () => Navigator.of(context).pop(currentWord)
+                              )
+                            ]
+                          ),
+                        );
+                      }
+                    );
+
+                    if (word != null) {
+                      if (await widget.api.addSavedWord(word)) {
+                        database.addSaveWordByName(word);
+                      }
+                    }
+                  }
+                ),
               );
             }
           );
@@ -121,53 +177,47 @@ class RandomWordsState extends ConsumerState<RandomWords> {
       ),
     );
   }
+
+  void fetchSavedWords() async {
+    List<String>? savedWords = await widget.api.getSavedWords();
+    if (savedWords != null) {
+      Database database = ref.read(databaseProvider);
+      database.removeAllSavedWords();
+      for (String word in savedWords) {
+        database.addSaveWordByName(word);
+      }
+      _suggestions.insertAll(0, savedWords);
+    }
+  }
 }
 
-class RandomWordRow extends StatefulWidget {
+class RandomWordRow extends StatelessWidget {
   final String word;
   final bool saved;
 
-  final Future<bool> Function()? onSave;
-  final Future<bool> Function()? onUnsave;
+  final Future Function()? onSave;
+  final Future Function()? onUnsave;
 
   const RandomWordRow({
     Key? key,
-    required this.word,
-    this.saved = false,
+    required this.word, required this.saved,
     this.onSave, this.onUnsave,
   }) : super(key: key);
 
   @override
-  State<RandomWordRow> createState() => _RandomWordRowState();
-}
-
-class _RandomWordRowState extends State<RandomWordRow> {
-  bool saved = false;
-  
-  @override
-  void initState() {
-    super.initState();
-    saved = widget.saved;
-  }
-
-  @override
   Widget build(BuildContext context) => ListTile(
-      title: Text(widget.word, style: const TextStyle(fontSize: 18)),
-      trailing: Icon(
-        saved ? Icons.favorite : Icons.favorite_border,
-        color: saved ? Colors.red : null,
-        semanticLabel: saved ? 'Remove from saved' : 'Save'
-      ),
-      onTap: () async {
-        if (saved) {
-           if (widget.onUnsave != null && await widget.onUnsave!()) {
-             setState(() => saved = false);
-           }
-        } else {
-          if (widget.onSave != null && await widget.onSave!()) {
-            setState(() => saved = true);
-          }
-        }
-      },
-    );
+    title: Text(word, style: const TextStyle(fontSize: 18)),
+    trailing: Icon(
+      saved ? Icons.favorite : Icons.favorite_border,
+      color: saved ? Colors.red : null,
+      semanticLabel: saved ? 'Remove from saved' : 'Save'
+    ),
+    onTap: () async {
+      if (saved) {
+        await onUnsave?.call();
+      } else {
+        await onSave?.call();
+      }
+    },
+  );
 }
