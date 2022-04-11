@@ -25,8 +25,9 @@ class Database extends _$Database {
 
   Future<List<SavedWord>> getSavedWordPairs() => select(savedWords).get();
   Stream<List<SavedWord>> watchSavedWords() => select(savedWords).watch();
-  Future<int> saveWord(SavedWordsCompanion savedWord) => into(savedWords).insert(savedWord);
-  Future<int> saveWordByName(String word) => saveWord(SavedWordsCompanion(word: Value(word)));
-  Future unsaveWord(SavedWord savedWord) => delete(savedWords).delete(savedWord);
-  Future unsaveWordByName(String word) => (delete(savedWords)..where((savedWord) => savedWord.word.equals(word))).go();
+  Future<int> addSavedWord(SavedWordsCompanion savedWord) => into(savedWords).insert(savedWord);
+  Future<int> addSaveWordByName(String word) => addSavedWord(SavedWordsCompanion(word: Value(word)));
+  Future removeSavedWord(SavedWord savedWord) => delete(savedWords).delete(savedWord);
+  Future removeSavedWordByName(String word) => (delete(savedWords)..where((savedWord) => savedWord.word.equals(word))).go();
+  Future removeAllSavedWords() => delete(savedWords).go();
 }
